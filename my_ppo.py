@@ -57,10 +57,10 @@ class PPO2(PPO):
         axis[4].plot(action_tensor, color='m')
         axis[4].set_title('Actions')
 
-        plt.savefig(f"obs_epoch_{str(epoch).rjust(4, '0')}.png")
+        plt.savefig(f"obs_epoch_{str(epoch).rjust(5, '0')}.png")
         plt.close()
 
-        mlflow.log_artifact(f"obs_epoch_{str(epoch).rjust(4, '0')}.png")
+        mlflow.log_artifact(f"obs_epoch_{str(epoch).rjust(5, '0')}.png")
 
     def train(self, iter):
         # mlflow.set_tracking_uri("http://127.0.0.1:5000")
@@ -177,8 +177,8 @@ class PPO2(PPO):
                 th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
                 self.policy.optimizer.step()
 
-            mlflow.log_metrics({f"critic_loss in iteration {iter}": np.mean(critic_loss_per_epoch)}, step=epoch)
-            mlflow.log_metrics({f"actor_loss in iteration {iter}": np.mean(actor_loss_per_epoch)}, step=epoch)
+            mlflow.log_metrics({f"critic_loss in iteration {str(iter).rjust(5, '0')}": np.mean(critic_loss_per_epoch)}, step=epoch)
+            mlflow.log_metrics({f"actor_loss in iteration {str(iter).rjust(5, '0')}": np.mean(actor_loss_per_epoch)}, step=epoch)
 
             self._n_updates += 1
             if not continue_training:
