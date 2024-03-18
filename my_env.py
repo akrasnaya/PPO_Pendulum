@@ -65,16 +65,28 @@ class InvertedPendulumEnv(gym.Env):
 
         self.reset_model()
 
+    def calculate_rewards(self, obs):
+        reward = - 10 * (1 - np.cos(obs[1])) - 10 * obs[0] ** 2 - 2 * obs[2] ** 2 - 2 * obs[3] ** 2
+        if abs(obs[0]) < 0.1 and abs(obs[1]) < 0.1:
+            reward += 20.0
+        return reward
+
     def step(self, a):
         self.data.ctrl = a
         mujoco.mj_step(self.model, self.data)
         self.viewer.sync()
 
         ob = self.obs()
-        if np.abs(ob[1]) < 0.05:
-            reward = 1
+
+        # reward = - 10 * (1 - np.cos(ob[1])) - 10 * ob[0] ** 2 - 2 * ob[2] ** 2 - 2 * ob[3] ** 2
+        # if abs(ob[0]) < 0.1 and abs(ob[1]) < 0.1:
+        #     reward += 20.0
+
+        if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
+            reward = 5
         else:
             reward = 0
+
         # reward = 1 / (
         #     0.01
         #     + 10 * ob[0] ** 2
@@ -115,6 +127,7 @@ class InvertedPendulumEnv(gym.Env):
             rgba=np.array(color),
         )
         self.viewer.user_scn.ngeom = 1
+
 
     @property
     def current_time(self):
