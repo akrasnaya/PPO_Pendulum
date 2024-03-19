@@ -1,13 +1,12 @@
-from stable_baselines3 import PPO, A2C, DQN
-from stable_baselines3.common.env_util import make_vec_env
-import time
-import mujoco
-import mujoco.viewer
+"""
+Setup:
+pip install mujoco numpy
+"""
+
 import numpy as np
-import gymnasium as gym
 
 
-class InvertedPendulumEnv(gym.Env):
+class InvertedPendulumEnv:
     xml_env = """
     <mujoco model="inverted pendulum">
             <visual>
@@ -48,92 +47,31 @@ class InvertedPendulumEnv(gym.Env):
     """
 
     def __init__(
-        self,  max_reset_angle, max_reset_pos, n_iterations
+        self,
     ):
         self.init_qpos = np.zeros(2)
         self.init_qvel = np.zeros(2)
         self.model = mujoco.MjModel.from_xml_string(InvertedPendulumEnv.xml_env)
         self.data = mujoco.MjData(self.model)
         self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
-
-        self.action_space = gym.spaces.Box(-20.0, 20.0, (1,), np.float32)
-        # The observation will be the coordinate of the agent
-        # this can be described both by Discrete and Box space
-        self.observation_space = gym.spaces.Box(
-            low=-np.inf, high=np.inf, shape=(4,), dtype=np.float32
-        )
-        #self.num_envs = 1
-        self.max_reset_pos = max_reset_pos
-        self.max_reset_angle = max_reset_angle
-        self.n_iterations = n_iterations
-        self.bound_angle = 0.01
-        self.bound_pos = 0.01
-        self.counter = 0
-        self.angle_step = np.round(max_reset_angle / n_iterations, 6)
-        self.pos_step = np.round(max_reset_pos / n_iterations, 6)
-
         self.reset_model()
 
     def step(self, a):
         self.data.ctrl = a
         mujoco.mj_step(self.model, self.data)
         self.viewer.sync()
-
+        reward = 1.0
         ob = self.obs()
-
-        # reward = -10 *(1 - np.cos(ob[1])) - 10*ob[0] **2
-        # if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[0]) < 0.1:
-        #     reward += 50
-
-        if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
-            reward = 6 * (np.cos(ob[1])) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
-            #reward = 5 - np.abs(ob[0])
-        else:
-            reward = 0
-
-        # reward = 1 / (
-        #     0.01
-        #     + 10 * ob[0] ** 2
-        #     + 10 * np.sin(ob[1]) ** 2
-        #     + 10 * (1 - np.cos(ob[1])) ** 2
-        #     + 10 * ob[2] ** 2
-        #     + 10 * ob[3] ** 2
-        # )
         terminated = bool(not np.isfinite(ob).all())
-        return ob, reward, terminated, terminated, {}
-
-    def set_boundaries(self, iter):
-        if iter == 0:
-            self.bound_angle = 0.01
-            self.bound_pos = 0.01
-        else:
-            self.bound_angle = min(1., iter /self.n_iterations) * self.max_reset_angle
-            self.bound_pos = min(1., iter/self.n_iterations) * self.max_reset_pos
-
+        return ob, reward, terminated
 
     def obs(self):
         return np.concatenate([self.data.qpos, self.data.qvel]).ravel()
 
-    def reset(self, seed=None, options=None):
-        obs = self.reset_model()
-        return obs, {}
-
     def reset_model(self):
-
         self.data.qpos = self.init_qpos
         self.data.qvel = self.init_qvel
-
-        # if self.counter <= self.n_iterations:
-        #     #self.bound_angle = self.bound_angle + self.angle_step
-        #     self.bound_pos = self.bound_pos + self.pos_step
-        #     self.counter += 1
-
-        self.data.qpos[1] = np.random.uniform(
-            low=-self.bound_angle, high=self.bound_angle
-        )  # Set the pole to be facing down
-        self.data.qpos[0] = np.random.uniform(
-            low=-self.bound_pos, high=self.bound_pos
-        )
+        self.data.qpos[1] = 3.14  # Set the pole to be facing down
         return self.obs()
 
     def set_dt(self, new_dt):
@@ -154,6 +92,3 @@ class InvertedPendulumEnv(gym.Env):
     @property
     def current_time(self):
         return self.data.time
-
-    def close(self):
-        pass

@@ -44,7 +44,7 @@ class PPO2(PPO):
 
     def plot_obs(self, action_tensor, obs_tensor, epoch):
         # plot and log obs
-        figure, axis = plt.subplots(5, 1, figsize=(50, 10))
+        figure, axis = plt.subplots(5, 1, figsize=(30, 20))
 
         axis[0].plot(obs_tensor[:, 0], color="r")
         axis[0].set_title("Cart position")
@@ -61,13 +61,16 @@ class PPO2(PPO):
         axis[4].plot(action_tensor, color="m")
         axis[4].set_title("Actions")
 
-        plt.savefig(f"obs/obs_epoch_{str(epoch).rjust(5, '0')}.png")
-        plt.close()
+        if epoch%500 == 0:
+            plt.savefig(f"obs/obs_epoch_{str(epoch).rjust(5, '0')}.png")
+            plt.close()
 
-        mlflow.log_artifact(
-            f"obs/obs_epoch_{str(epoch).rjust(5, '0')}.png",
-            "obs",
-        )
+            mlflow.log_artifact(
+                f"obs/obs_epoch_{str(epoch).rjust(5, '0')}.png",
+                "obs",
+            )
+        else:
+            plt.close()
 
     def train(self, iter):
         # mlflow.set_tracking_uri("http://127.0.0.1:5000")
@@ -113,6 +116,8 @@ class PPO2(PPO):
                 values, log_prob, entropy = self.policy.evaluate_actions(
                     rollout_data.observations, actions
                 )
+
+
                 obs_tensor = torch.cat((obs_tensor, rollout_data.observations), dim=0)
 
                 values = values.flatten()
@@ -224,6 +229,8 @@ class PPO2(PPO):
         # mlflow.log_metrics({f"critic_loss in iteration {iter}": np.mean(value_losses)}, step=epoch)
         # mlflow.log_metrics({f"actor_loss in iteration {iter}": np.mean(pg_losses)}, step=epoch)
         mlflow.log_metric("Total Reward", self.rollout_buffer.rewards.sum(), step=iter)
+
+        #self.env.set_boundaries(iter)
         self.env.reset()
 
         explained_var = explained_variance(
@@ -244,7 +251,8 @@ class PPO2(PPO):
 
         experiment_name = f"ppo cartpole hold"
         now = datetime.now()
-        run_name = now.strftime("%m/%d/%Y, %H:%M:%S")
+        #run_name = f"steps_{self.n_steps}_" + now.strftime("%m/%d/%Y, %H:%M:%S")
+        run_name = f"BOUND_EXPAND_LEARN_{self.n_steps}_STEPS_" + now.strftime("%m/%d/%Y, %H:%M:%S")
         mlflow.set_experiment(experiment_name)
 
         iteration = 0
@@ -282,6 +290,40 @@ class PPO2(PPO):
                 )
 
                 self.train(iteration)
+
+                # if iteration % 500 == 0:
+                #
+                #     # Saving actor network
+                #     torch.save(self.policy.action_net.state_dict(), f'models/ppo_actor_cartpole_iter{str(iteration)}.pth')
+                #     mlflow.log_artifact(f'models/ppo_actor_cartpole_iter{str(iteration)}.pth',
+                #                         'models')
+                #
+                #     # Saving critic network
+                #     torch.save(self.policy.value_net.state_dict(), f'models/ppo_critic_cartpole_iter{str(iteration)}.pth')
+                #     mlflow.log_artifact(f'models/ppo_critic_cartpole_iter{str(iteration)}.pth',
+                #                         'models')
+                #
+                #     torch.save(self.policy.state_dict(), f'models/ppo_policy_cartpole_iter{str(iteration)}.pth')
+                #     mlflow.log_artifact(f'models/ppo_policy_cartpole_iter{str(iteration)}.pth',
+                #                         'models')
+                #
+                #     #self.save(f'/model_{str(iteration)}')
+
+            # Saving actor network
+            torch.save(self.policy.action_net.state_dict(), f'models/ppo_actor_cartpole_iter{str(iteration)}.pth')
+            mlflow.log_artifact(f'models/ppo_actor_cartpole_iter{str(iteration)}.pth',
+                                'models')
+
+            # Saving critic network
+            torch.save(self.policy.value_net.state_dict(), f'models/ppo_critic_cartpole_iter{str(iteration)}.pth')
+            mlflow.log_artifact(f'models/ppo_critic_cartpole_iter{str(iteration)}.pth',
+                                'models')
+
+            torch.save(self.policy.state_dict(), f'models/ppo_policy_cartpole_iter{str(iteration)}.pth')
+            mlflow.log_artifact(f'models/ppo_policy_cartpole_iter{str(iteration)}.pth',
+                                'models')
+
+            #self.save(f'model_{str(iteration)}')
 
         callback.on_training_end()
 
