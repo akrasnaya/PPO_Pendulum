@@ -40,6 +40,17 @@ from torch.nn import functional as F
 from my_env import InvertedPendulumEnv
 from my_ppo import PPO2
 from typing import OrderedDict
+from argparse import ArgumentParser
+
+
+def get_model_from_cli():
+    parser = ArgumentParser('PPO')
+    parser.add_argument('-m',
+                        'model',
+                        type=str,
+                        action='store',
+                        help='configuration of model to learn')
+    return parser.parse_args()
 
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
 kwargs = OrderedDict([
@@ -67,6 +78,6 @@ model = PPO2.load('baseline_trans_model.zip', env=InvertedPendulumEnv(max_reset_
 #model.policy.action_net = th.load('models/ppo_actor_cartpole_iter5.pth')
 #model.policy.value_net = th.load('models/ppo_critic_cartpole_iter5.pth')
 model.learn(3072000.0, callback=None)
-model.save('bound_expand_model')
+model.save('bound_expand_model_2')
 
 #PPO2(env=InvertedPendulumEnv(), device="cpu", **kwargs).learn(5120000.0, callback=None)

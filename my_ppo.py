@@ -269,6 +269,7 @@ class PPO2(PPO):
 
         assert self.env is not None
 
+
         with mlflow.start_run(run_name=run_name):
             for py_file in Path(__file__).parent.glob("*.py"):
                 mlflow.log_artifact(str(py_file), f"code")
@@ -289,25 +290,9 @@ class PPO2(PPO):
                     self.num_timesteps, total_timesteps
                 )
 
+                mlflow.log_metric('Initial cart position distribution bounds', self.env.bound_pos, step=iteration)
                 self.train(iteration)
 
-                # if iteration % 500 == 0:
-                #
-                #     # Saving actor network
-                #     torch.save(self.policy.action_net.state_dict(), f'models/ppo_actor_cartpole_iter{str(iteration)}.pth')
-                #     mlflow.log_artifact(f'models/ppo_actor_cartpole_iter{str(iteration)}.pth',
-                #                         'models')
-                #
-                #     # Saving critic network
-                #     torch.save(self.policy.value_net.state_dict(), f'models/ppo_critic_cartpole_iter{str(iteration)}.pth')
-                #     mlflow.log_artifact(f'models/ppo_critic_cartpole_iter{str(iteration)}.pth',
-                #                         'models')
-                #
-                #     torch.save(self.policy.state_dict(), f'models/ppo_policy_cartpole_iter{str(iteration)}.pth')
-                #     mlflow.log_artifact(f'models/ppo_policy_cartpole_iter{str(iteration)}.pth',
-                #                         'models')
-                #
-                #     #self.save(f'/model_{str(iteration)}')
 
             # Saving actor network
             torch.save(self.policy.action_net.state_dict(), f'models/ppo_actor_cartpole_iter{str(iteration)}.pth')

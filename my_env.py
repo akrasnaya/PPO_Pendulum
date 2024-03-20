@@ -63,6 +63,8 @@ class InvertedPendulumEnv(gym.Env):
             low=-np.inf, high=np.inf, shape=(4,), dtype=np.float32
         )
         #self.num_envs = 1
+
+        # data below is used for the extend boundaries experiment
         self.max_reset_pos = max_reset_pos
         self.max_reset_angle = max_reset_angle
         self.n_iterations = n_iterations
@@ -81,24 +83,12 @@ class InvertedPendulumEnv(gym.Env):
 
         ob = self.obs()
 
-        # reward = -10 *(1 - np.cos(ob[1])) - 10*ob[0] **2
-        # if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[0]) < 0.1:
-        #     reward += 50
-
         if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
             reward = 6 * (np.cos(ob[1])) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
             #reward = 5 - np.abs(ob[0])
         else:
             reward = 0
 
-        # reward = 1 / (
-        #     0.01
-        #     + 10 * ob[0] ** 2
-        #     + 10 * np.sin(ob[1]) ** 2
-        #     + 10 * (1 - np.cos(ob[1])) ** 2
-        #     + 10 * ob[2] ** 2
-        #     + 10 * ob[3] ** 2
-        # )
         terminated = bool(not np.isfinite(ob).all())
         return ob, reward, terminated, terminated, {}
 
