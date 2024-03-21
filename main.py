@@ -76,12 +76,12 @@ def main(args=get_model_from_cli()):
                                      reward_type=0),
              device="cpu", **kwargs).learn(5120000.0, callback=None)
     elif args.model == 'transfer':
-        model = PPO2.load('baseline_model.zip', env=InvertedPendulumEnv(max_reset_pos=0.01,
+        model = PPO2.load('snapshots/baseline_model.zip', env=InvertedPendulumEnv(max_reset_pos=0.01,
                                                                         n_iterations=1,
                                                                         reward_type=1))
         model.learn(614400.0, callback=None)
     elif args.model == 'bound_ext':
-        model = PPO2.load('baseline_trans_model.zip', env=InvertedPendulumEnv(max_reset_pos=0.6,
+        model = PPO2.load('snapshots/baseline_trans_model.zip', env=InvertedPendulumEnv(max_reset_pos=0.6,
                                                                               n_iterations=1600,
                                                                               reward_type=1))
         model.learn(3072000.0, callback=None)

@@ -7,7 +7,7 @@ from my_ppo import PPO2
 import mlflow
 
 env = InvertedPendulumEnv(max_reset_pos=0.6, n_iterations=1600, reward_type=1)
-model = PPO2.load('bound_expand_model', env=env)
+model = PPO2.load('snapshots/bound_expand_model', env=env)
 
 
 
