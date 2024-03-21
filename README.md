@@ -42,9 +42,10 @@ pip install -r requirements.txt
 - my_env.py # данное окружение, расширенное базовыми атрибутами и функцией наград
 - my_ppo.py # PPO policy stable-baseline, расширенная добавлением трекинга mlflow
 - default_env.py # данное окружение
-- baseline_model.zip # снепшот базовой модели п. 1
-- baseline_trans_model.zip # снепшот дообученной модели п. 2
-- bound_expand_model.zip # снепшот расширенной модели п. 3
+- snapshots 
+  - baseline_model.zip # снепшот базовой модели п. 1
+  - baseline_trans_model.zip # снепшот дообученной модели п. 2
+  - bound_expand_model.zip # снепшот расширенной модели п. 3
 ```
 ### Ход решения
 
