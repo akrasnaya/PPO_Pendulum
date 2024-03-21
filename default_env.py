@@ -4,7 +4,7 @@ pip install mujoco numpy
 """
 
 import numpy as np
-
+import mujoco
 
 class InvertedPendulumEnv:
     xml_env = """
