@@ -45,8 +45,7 @@ from argparse import ArgumentParser
 
 def get_model_from_cli():
     parser = ArgumentParser('PPO')
-    parser.add_argument('-m',
-                        'model',
+    parser.add_argument('model',
                         type=str,
                         action='store',
                         help='configuration of model to learn')
@@ -70,31 +69,24 @@ kwargs = OrderedDict([
 
 
 def main(args=get_model_from_cli()):
+    print(args)
     if args.model == 'baseline':
-        PPO2(env=InvertedPendulumEnv(), device="cpu", **kwargs).learn(5120000.0, callback=None)
+        PPO2(env=InvertedPendulumEnv(max_reset_pos=0.01,
+                                     n_iterations=1,
+                                     reward_type=0),
+             device="cpu", **kwargs).learn(5120000.0, callback=None)
     elif args.model == 'transfer':
-        model = PPO2.load('baseline_trans_model.zip', env=InvertedPendulumEnv(max_reset_angle=np.pi / 6,
-                                                                              max_reset_pos=0.6,
-                                                                              n_iterations=1600))
-        model.learn(3072000.0, callback=None)
+        model = PPO2.load('baseline_model.zip', env=InvertedPendulumEnv(max_reset_pos=0.01,
+                                                                        n_iterations=1,
+                                                                        reward_type=1))
+        model.learn(614400.0, callback=None)
     elif args.model == 'bound_ext':
-        model = PPO2.load('baseline_trans_model.zip', env=InvertedPendulumEnv(max_reset_angle=np.pi / 6,
-                                                                              max_reset_pos=0.6,
-                                                                              n_iterations=1600))
+        model = PPO2.load('baseline_trans_model.zip', env=InvertedPendulumEnv(max_reset_pos=0.6,
+                                                                              n_iterations=1600,
+                                                                              reward_type=1))
         model.learn(3072000.0, callback=None)
     else:
         print('model not recognized')
 
 
 main()
-
-# #model = PPO2(env=InvertedPendulumEnv(), device="cpu", **kwargs)
-# model = PPO2.load('baseline_trans_model.zip', env=InvertedPendulumEnv(max_reset_angle=np.pi / 6,
-#                                                                 max_reset_pos=0.6,
-#                                                                 n_iterations=1600))
-# #model.env = InvertedPendulumEnv()
-#
-# model.learn(3072000.0, callback=None)
-# model.save('bound_expand_model_2')
-#
-# #PPO2(env=InvertedPendulumEnv(), device="cpu", **kwargs).learn(5120000.0, callback=None)

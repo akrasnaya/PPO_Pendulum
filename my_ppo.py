@@ -290,7 +290,6 @@ class PPO2(PPO):
                     self.num_timesteps, total_timesteps
                 )
 
-                mlflow.log_metric('Initial cart position distribution bounds', self.env.bound_pos, step=iteration)
                 self.train(iteration)
 
 

@@ -48,7 +48,7 @@ class InvertedPendulumEnv(gym.Env):
     """
 
     def __init__(
-        self,  max_reset_angle, max_reset_pos, n_iterations
+        self,  max_reset_pos, n_iterations, reward_type
     ):
         self.init_qpos = np.zeros(2)
         self.init_qvel = np.zeros(2)
@@ -64,15 +64,16 @@ class InvertedPendulumEnv(gym.Env):
         )
         #self.num_envs = 1
 
-        # data below is used for the extend boundaries experiment
+        # data below is used for the extending boundaries experiment
         self.max_reset_pos = max_reset_pos
-        self.max_reset_angle = max_reset_angle
         self.n_iterations = n_iterations
         self.bound_angle = 0.01
         self.bound_pos = 0.01
         self.counter = 0
-        self.angle_step = np.round(max_reset_angle / n_iterations, 6)
         self.pos_step = np.round(max_reset_pos / n_iterations, 6)
+
+        #reward flag for configuring exps
+        self.reward_type = reward_type
 
         self.reset_model()
 
@@ -84,21 +85,15 @@ class InvertedPendulumEnv(gym.Env):
         ob = self.obs()
 
         if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
-            reward = 6 * (np.cos(ob[1])) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
-            #reward = 5 - np.abs(ob[0])
+            if self.reward_type == 0:
+                reward = 5 - np.abs(ob[0])
+            elif self.reward_type == 1:
+                reward = 6 * (np.cos(ob[1])) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
         else:
             reward = 0
 
         terminated = bool(not np.isfinite(ob).all())
         return ob, reward, terminated, terminated, {}
-
-    def set_boundaries(self, iter):
-        if iter == 0:
-            self.bound_angle = 0.01
-            self.bound_pos = 0.01
-        else:
-            self.bound_angle = min(1., iter /self.n_iterations) * self.max_reset_angle
-            self.bound_pos = min(1., iter/self.n_iterations) * self.max_reset_pos
 
 
     def obs(self):
@@ -113,10 +108,9 @@ class InvertedPendulumEnv(gym.Env):
         self.data.qpos = self.init_qpos
         self.data.qvel = self.init_qvel
 
-        # if self.counter <= self.n_iterations:
-        #     #self.bound_angle = self.bound_angle + self.angle_step
-        #     self.bound_pos = self.bound_pos + self.pos_step
-        #     self.counter += 1
+        if self.counter <= self.n_iterations and self.bound_pos <= self.max_reset_pos:
+            self.bound_pos = self.bound_pos + self.pos_step
+            self.counter += 1
 
         self.data.qpos[1] = np.random.uniform(
             low=-self.bound_angle, high=self.bound_angle
