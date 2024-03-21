@@ -7,7 +7,7 @@ from my_ppo import PPO2
 import mlflow
 
 env = InvertedPendulumEnv(max_reset_angle=np.pi / 6, max_reset_pos=0.6, n_iterations=1600)
-model = PPO2.load('bound_expand_model.zip', env=env)
+model = PPO2.load('bound_expand_model', env=env)
 
 
 
