@@ -84,13 +84,20 @@ class InvertedPendulumEnv(gym.Env):
 
         ob = self.obs()
 
-        if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
-            if self.reward_type == 0:
-                reward = 5 - np.abs(ob[0])
-            elif self.reward_type == 1:
-                reward = 6 * (np.cos(ob[1])) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
+        if np.cos(ob[1]) > 0:
+            reward = np.cos(ob[1]) * 5 - np.abs(np.sin(ob[1])) * 3 + (np.abs(ob[0]) < 0.1) * 2
+            if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
+                reward += 6 * (1 - np.cos(ob[1])) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
         else:
             reward = 0
+
+        # if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
+        #     if self.reward_type == 0:
+        #         reward = 5 - np.abs(ob[0])
+        #     elif self.reward_type == 1:
+        #         reward = 6 * (np.cos(ob[1])) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
+        # else:
+        #     reward = 0
 
         terminated = bool(not np.isfinite(ob).all())
         return ob, reward, terminated, terminated, {}
@@ -107,17 +114,18 @@ class InvertedPendulumEnv(gym.Env):
 
         self.data.qpos = self.init_qpos
         self.data.qvel = self.init_qvel
+        self.data.qpos[1] = 3.14  # Set the pole to be facing down
 
-        if self.counter <= self.n_iterations and self.bound_pos <= self.max_reset_pos:
-            self.bound_pos = self.bound_pos + self.pos_step
-            self.counter += 1
-
-        self.data.qpos[1] = np.random.uniform(
-            low=-self.bound_angle, high=self.bound_angle
-        )  # Set the pole to be facing down
-        self.data.qpos[0] = np.random.uniform(
-            low=-self.bound_pos, high=self.bound_pos
-        )
+        # if self.counter <= self.n_iterations and self.bound_pos <= self.max_reset_pos:
+        #     self.bound_pos = self.bound_pos + self.pos_step
+        #     self.counter += 1
+        #
+        # self.data.qpos[1] = np.random.uniform(
+        #     low=-self.bound_angle, high=self.bound_angle
+        # )  # Set the pole to be facing down
+        # self.data.qpos[0] = np.random.uniform(
+        #     low=-self.bound_pos, high=self.bound_pos
+        # )
         return self.obs()
 
     def set_dt(self, new_dt):

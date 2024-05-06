@@ -1,16 +1,26 @@
-from my_env import InvertedPendulumEnv
 from networks import Actor, Critic
 
+import torch
+from torch import nn
 from torch.distributions import MultivariateNormal
 from torch.optim import Adam
+import numpy as np
 import mlflow
+from datetime import datetime
+from pathlib import Path
+import random
+
+SEED = 14
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+random.seed(SEED)
 
 class PPO:
     def __init__(self, env):
         # Extract environment information
         self.env = env
-        self.obs_dim = InvertedPendulumEnv.observation_space.shape[0]
-        self.act_dim = InvertedPendulumEnv.action_space.shape[0]
+        self.obs_dim = env.observation_space.shape[0]
+        self.act_dim = env.action_space.shape[0]
         self._init_hyperparameters()
 
         # Initialize actor and critic networks
@@ -25,12 +35,15 @@ class PPO:
         self.cov_mat = torch.diag(self.cov_var)
 
     def _init_hyperparameters(self):
-        self.timesteps_per_batch = 4800
-        self.max_timesteps_per_episode = 1600
-        self.gamma = 0.95
+        self.timesteps_per_batch = 1024
+        self.max_timesteps_per_episode = 400
+        self.gamma = 0.999
         self.n_updates_per_iteration = 5
         self.clip = 0.2
-        self.lr = 0.005
+        self.lr = 0.000222425
+        self.ent_coef = 1.37976e-07
+        self.grad_norm = 0.3
+        self.gae_lam = 0.9 # GAE Lambda
 
     def evaluate(self, batch_obs, batch_acts):
         """
@@ -42,7 +55,7 @@ class PPO:
         dist = MultivariateNormal(mean_act, self.cov_mat)
         log_probs = dist.log_prob(batch_acts)
 
-        return V, log_probs
+        return V, log_probs, dist.entropy() # in order to add entropy regularization
 
     def compute_rtgs(self, batch_rews):
         """
@@ -60,7 +73,6 @@ class PPO:
 
         return batch_rtgs
 
-
     def get_action(self, obs):
         # Quering the actor network for a mean action
         mean_act = self.actor(obs)
@@ -70,7 +82,29 @@ class PPO:
         action = dist.sample()
         log_prob = dist.log_prob(action)
 
-        return action.detatch().numpy(), log_prob.detatch()
+        return action.detach().numpy(), log_prob.detach()
+
+    def compute_gae(self, rewards, values, dones):
+        batch_advs = []
+        for ep_rews, ep_vals, ep_dones in zip(rewards, values, dones):
+            advantages = []
+            last_adv = 0
+
+            for t in reversed(range(len(ep_rews))):
+                if t + 1 < len(ep_rews):
+                    delta = ep_rews[t] + self.gamma * ep_vals[t + 1] * (1 - ep_dones[t + 1]) - ep_vals[t]
+                else:
+                    delta = ep_rews[t] - ep_vals[t]
+
+                advantage = delta + self.gamma * self.gae_lam * (1 - ep_dones[t]) * last_adv
+                last_adv = advantage
+                advantages.insert(0, advantage)
+
+            batch_advs.extend(advantages)
+
+        #batch_advs = np.array(batch_advs)
+
+        return torch.tensor(batch_advs, dtype=torch.float)
 
     def rollout(self):
         """
@@ -84,23 +118,34 @@ class PPO:
         batch_rews = []         # batch rewards
         batch_rtgs = []         # batch rewards-to-go
         batch_lens = []         # episodic lenghts in batch
+        batch_vals = []
+        batch_dones = []
+
 
         t = 0                   # Number of timesteps run so far in this batch
 
         while t < self.timesteps_per_batch:
             ep_rews = []        # Episode rewards
+            ep_vals = []
+            ep_dones = []
 
             obs, _ = self.env.reset()
             done = False
 
             for ep_t in range(self.max_timesteps_per_episode):
+                ep_dones.append(done)
                 t += 1
 
                 batch_obs.append(obs)
                 action, log_prob = self.get_action(obs)
-                obs, rew, done, _, _ = self.env.step(action)
+                val = self.critic(obs)
+
+                obs, rew, terminated, truncated, _ = self.env.step(action)
+                done = terminated or truncated
 
                 ep_rews.append(rew)
+                ep_vals.append(val)
+
                 batch_acts.append(action)
                 batch_log_probs.append(log_prob)
 
@@ -110,24 +155,39 @@ class PPO:
             # Collect episodic lenghts and rewards
             batch_lens.append(ep_t + 1)
             batch_rews.append(ep_rews)
+            batch_vals.append(ep_vals)
+            batch_dones.append(ep_dones)
+
+
+        # Convert to np.array
+        batch_obs = np.array(batch_obs)
+        batch_acts = np.array(batch_acts)
+        batch_rews = np.array(batch_rews)
+        batch_rtgs = np.array(batch_rtgs)
+        batch_log_probs = np.array(batch_log_probs)
+        batch_lens = np.array(batch_lens)
+        batch_dones = np.array(batch_dones)
+        #batch_vals = np.array(batch_vals)
+
 
         # Reshape data as tensors
         batch_obs = torch.tensor(batch_obs, dtype=torch.float)
         batch_acts = torch.tensor(batch_acts, dtype=torch.float)
         batch_log_probs = torch.tensor(batch_log_probs, dtype=torch.float)
+        batch_rews = torch.tensor(batch_rews, dtype=torch.float)
+        #batch_vals = torch.tensor(batch_vals, dtype=torch.float)
 
         batch_rtgs = self.compute_rtgs(batch_rews)
 
         # Return the batch data
-        return batch_obs, batch_acts, batch_log_probs, batch_rtgs, batch_lens
+        return batch_obs, batch_acts, batch_log_probs, batch_rews, batch_rtgs, batch_lens, batch_vals, batch_dones
 
-
-    def learn(self):
+    def learn(self, total_timesteps):
         # Set logging
         mlflow.set_tracking_uri("http://127.0.0.1:5000")
         experiment_name = f"ppo cartpole hold"
         now = datetime.now()
-        run_name = f"BOUND_EXPAND_LEARN_{self.n_steps}_STEPS_" + now.strftime("%m/%d/%Y, %H:%M:%S")
+        run_name = "UPSWING_" + now.strftime("%m/%d/%Y, %H:%M:%S")
         mlflow.set_experiment(experiment_name)
 
         with mlflow.start_run(run_name=run_name):
@@ -136,23 +196,37 @@ class PPO:
 
             t_so_far = 0    # Timesteps simulated so far
             while t_so_far < total_timesteps:
-                batch_obs, batch_acts, batch_log_probs, batch_rtgs, batch_lens = self.rollout()
+                batch_obs, batch_acts, batch_log_probs, batch_rews, \
+                    batch_rtgs, batch_lens, batch_vals, batch_dones = self.rollout()
 
-                t_so_far += np.sum(batch_lens)
-
-                V, _ = self.evaluate(batch_obs)
+                # Adding GAE calculation
+                A_k = self.compute_gae(batch_rews, batch_vals, batch_dones)
+                #V, _, _ = self.evaluate(batch_obs, batch_acts)
+                V = self.critic(batch_obs).squeeze()
+                batch_rtgs = A_k + V.detach()
 
                 # Calculate advantage
-                A_k = batch_rtgs - V.detatch()
+                #A_k = batch_rtgs - V.detach()
 
                 # Normalizing advantage
                 A_k = (A_k - A_k.mean()) / (A_k.std() + 1e-10)
 
-                for epoch in self.n_updates_per_iteration:
-                    # Calculate pi_theta(a_t | s_t)
-                    V, curr_log_probs = self.evaluate(batch_obs, batch_acts)
+                t_so_far += np.sum(batch_lens)
 
-                    ratios = torch.exp(curr_log_probs - batch_log_probs)
+                for epoch in range(self.n_updates_per_iteration):
+                    # Learning rate annealing
+                    new_lr = max(0.0, self.lr * (1.0 - ((t_so_far - 1.0) / total_timesteps)))
+                    self.actor_optimizer.param_groups[0]['lr'] = new_lr
+                    self.critic_optimizer.param_groups[0]['lr'] = new_lr
+                    mlflow.log_metric('Learning rate', new_lr, step=epoch)
+
+                    # Calculate pi_theta(a_t | s_t)
+                    V, curr_log_probs, entropy = self.evaluate(batch_obs, batch_acts)
+
+                    # Approximating KL Divergence
+                    logratios = curr_log_probs - batch_log_probs
+                    ratios = torch.exp(logratios)
+                    kl_div = ((ratios - 1) - logratios).mean()
 
                     # Calculate surrogate loss
                     surr1 = ratios * A_k
@@ -160,27 +234,37 @@ class PPO:
 
                     actor_loss = (-torch.min(surr1, surr2)).mean()
 
+                    # Adding entropy regularization
+                    entropy_loss = entropy.mean()
+                    actor_loss = actor_loss - self.ent_coef * entropy_loss
+
+                    mlflow.log_metric('Actor loss', actor_loss, step=epoch)
+
                     self.actor_optimizer.zero_grad()
                     actor_loss.backward(retain_graph=True)
+                    nn.utils.clip_grad_norm_(self.actor.parameters(), self.grad_norm)
                     self.actor_optimizer.step()
 
                     critic_loss = nn.MSELoss()(V, batch_rtgs)
 
+                    mlflow.log_metric('Critic loss', critic_loss, step=epoch)
+
                     self.critic_optimizer.zero_grad()
                     critic_loss.backward()
+                    nn.utils.clip_grad_norm_(self.critic.parameters(), self.grad_norm)
                     self.critic_optimizer.step()
 
-                    mlflow.log_metric("Total Reward", batch_rtgs.sum(), step=epoch)
+                mlflow.log_metric("Total Reward", batch_rews.sum(), step=t_so_far)
 
             # Saving actor network
             torch.save(self.actor.state_dict(),
-                        f'models/ppo_actor_cartpole_iter{str(iteration)}.pth')
-            mlflow.log_artifact(f'models/ppo_actor_cartpole_iter{str(iteration)}.pth',
+                        f'models/ppo_actor_cartpole_hold4.pth')
+            mlflow.log_artifact(f'models/ppo_actor_cartpole_hold4.pth',
                                 'models')
 
             # Saving critic network
             torch.save(self.critic.state_dict(),
-                        f'models/ppo_critic_cartpole_iter{str(iteration)}.pth')
-            mlflow.log_artifact(f'models/ppo_critic_cartpole_iter{str(iteration)}.pth',
+                        f'models/ppo_critic_cartpole_hold4.pth')
+            mlflow.log_artifact(f'models/ppo_critic_cartpole_hold4.pth',
                                     'models')
 

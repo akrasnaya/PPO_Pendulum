@@ -1,3 +1,6 @@
 stable-baselines3
-mujoco
-mlflow
+mujoco~=3.1.4
+mlflow~=2.12.1
+torch~=2.3.0
+numpy~=1.26.4
+gymnasium~=0.29.1
