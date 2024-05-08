@@ -134,7 +134,7 @@ class InvertedPendulumEnv(gym.Env):
 
         self.data.qpos = self.init_qpos
         self.data.qvel = self.init_qvel
-        #self.data.qpos[1] = 3.14  # Set the pole to be facing down
+        self.data.qpos[1] = 3.14  # Set the pole to be facing down
 
         # if self.counter <= self.n_iterations and self.bound_pos <= self.max_reset_pos:
         #     self.bound_pos = self.bound_pos + self.pos_step

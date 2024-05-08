@@ -25,15 +25,16 @@ target_pos = [0, 0, 0.6]
 while env.current_time < 5000:
     if env.current_time - last_update > 10:
         target_pos = [np.random.rand() - 0.5, 0, 0.6]
-        env.draw_ball(target_pos, radius=0.05)
+        #env.draw_ball(target_pos, radius=0.05)
         last_update = env.current_time
     ob = np.array(ob)
-    ob[0] = np.clip((ob[0] - target_pos[0]), -0.4, 0.2)
+    #ob[0] = np.clip((ob[0] - target_pos[0]), -0.4, 0.2)
     action1, _ = model_hold.get_action(ob)
     action2, _ = model.get_action(ob)
-    if np.cos(ob[1]) > 0:
-        action = np.abs(np.cos(ob[1])) * action1 + (1 - np.abs(np.cos(ob[1]))) * action2
-    else:
-        action = action2
+    # if np.cos(ob[1]) > 0:
+    #     action = np.abs(np.cos(ob[1])) * action1 + (1 - np.abs(np.cos(ob[1]))) * action2
+    # else:
+    #     action = action2
+    action = action2
     ob, reward, terminated, terminated, info = env.step(action[0])
     time.sleep(0.01)
