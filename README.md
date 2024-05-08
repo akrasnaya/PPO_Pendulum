@@ -109,7 +109,7 @@ if np.cos(pole_angle) > 0:
 ипользовали в подобной задаче, но решали другим алгоритмом. После ряда экспериментов удалось получить политику, которая
 также способна запрокидывать маятник наверх, но не может его удерживать долго. Параметры наиболее удачного эксперимента
 привежены ниже:
->```python
+```python
 timesteps_per_batch = 1024
 max_timesteps_per_episode = 400
 gamma = 0.99
@@ -134,7 +134,7 @@ if np.cos(pole_angle) > 0:
    reward += np.cos(pole_angle) * 5 - np.abs(np.sin(pole_angle)) * 3 + (np.abs(cart_position) < 0.1) * 2
    if np.abs(pole_angle) < np.pi / 8 and np.abs(pole_an_speed) < 0.5:
       reward += 6 * np.cos(pole_angle) - 3 * np.abs(cart_position) + (np.abs(cart_position) < 0.05) * 2
-> ```
+ ```
 
 #### График обучения upswing модели:
 ![График обучения transfer модели ](pictures/upswing_reward.png)
