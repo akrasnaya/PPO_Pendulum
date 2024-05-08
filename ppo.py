@@ -37,12 +37,12 @@ class PPO:
     def _init_hyperparameters(self):
         self.timesteps_per_batch = 1024
         self.max_timesteps_per_episode = 400
-        self.gamma = 0.999
+        self.gamma = 0.99
         self.n_updates_per_iteration = 5
         self.clip = 0.2
-        self.lr = 0.000222425
+        self.lr = 0.00025
         self.ent_coef = 1.37976e-07
-        self.grad_norm = 0.3
+        self.grad_norm = 0.5
         self.gae_lam = 0.9 # GAE Lambda
 
     def evaluate(self, batch_obs, batch_acts):
@@ -258,13 +258,13 @@ class PPO:
 
             # Saving actor network
             torch.save(self.actor.state_dict(),
-                        f'models/ppo_actor_cartpole_hold4.pth')
-            mlflow.log_artifact(f'models/ppo_actor_cartpole_hold4.pth',
+                        f'models/ppo_actor_cartpole_hold10.pth')
+            mlflow.log_artifact(f'models/ppo_actor_cartpole_hold10.pth',
                                 'models')
 
             # Saving critic network
             torch.save(self.critic.state_dict(),
-                        f'models/ppo_critic_cartpole_hold4.pth')
-            mlflow.log_artifact(f'models/ppo_critic_cartpole_hold4.pth',
+                        f'models/ppo_critic_cartpole_hold10.pth')
+            mlflow.log_artifact(f'models/ppo_critic_cartpole_hold10.pth',
                                     'models')
 

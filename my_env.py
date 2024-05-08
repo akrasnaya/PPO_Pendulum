@@ -56,7 +56,7 @@ class InvertedPendulumEnv(gym.Env):
         self.data = mujoco.MjData(self.model)
         self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
 
-        self.action_space = gym.spaces.Box(-20.0, 20.0, (1,), np.float32)
+        self.action_space = gym.spaces.Box(-3.0, 3.0, (1,), np.float32)
         # The observation will be the coordinate of the agent
         # this can be described both by Discrete and Box space
         self.observation_space = gym.spaces.Box(
@@ -75,21 +75,40 @@ class InvertedPendulumEnv(gym.Env):
         #reward flag for configuring exps
         self.reward_type = reward_type
 
+        # termination borders
+        self.x_limit = 1.5
+        self.theta_limit = np.pi / 90
+
+
         self.reset_model()
 
     def step(self, a):
         self.data.ctrl = a
         mujoco.mj_step(self.model, self.data)
         self.viewer.sync()
+        done = False
 
         ob = self.obs()
+
+        # two_pi = 2 * np.pi
+        # reward_theta = (np.e ** (np.cos(ob[1]) + 1.0) - 1.0)
+        # reward_x = np.cos((ob[0] / 5) * (np.pi / 2.0))
+        # reward_theta_dot = (np.cos(ob[1]) * (np.e ** (np.cos(ob[3]) + 1.0) - 1.0) / two_pi) + 1.0
+        # reward_x_dot = ((np.cos(ob[1]) * (np.e ** (np.cos(ob[2]) + 1.0) - 1) / two_pi) + 1.0)
+        # reward = (reward_theta + reward_x + reward_theta_dot + reward_x_dot) / 4.0
 
         if np.cos(ob[1]) > 0:
             reward = np.cos(ob[1]) * 5 - np.abs(np.sin(ob[1])) * 3 + (np.abs(ob[0]) < 0.1) * 2
             if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
-                reward += 6 * (1 - np.cos(ob[1])) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
+                reward = 6 * np.cos(ob[1]) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
         else:
             reward = 0
+
+        # if np.abs(ob[1]) < self.theta_limit:
+        #     done = True
+        #     reward += 20
+        # else:
+        #     reward = np.abs(np.sin(ob[1])) + np.sqrt(np.abs(ob[2])) + np.sqrt(np.abs(ob[3])) - 2 * np.abs(ob[0])
 
         # if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
         #     if self.reward_type == 0:
@@ -99,8 +118,9 @@ class InvertedPendulumEnv(gym.Env):
         # else:
         #     reward = 0
 
-        terminated = bool(not np.isfinite(ob).all())
-        return ob, reward, terminated, terminated, {}
+        terminated = bool((not np.isfinite(ob).all()))
+
+        return ob, reward, terminated, done, {}
 
 
     def obs(self):
@@ -114,7 +134,7 @@ class InvertedPendulumEnv(gym.Env):
 
         self.data.qpos = self.init_qpos
         self.data.qvel = self.init_qvel
-        self.data.qpos[1] = 3.14  # Set the pole to be facing down
+        #self.data.qpos[1] = 3.14  # Set the pole to be facing down
 
         # if self.counter <= self.n_iterations and self.bound_pos <= self.max_reset_pos:
         #     self.bound_pos = self.bound_pos + self.pos_step

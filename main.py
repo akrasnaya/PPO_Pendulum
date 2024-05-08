@@ -72,7 +72,10 @@ def main():
         'clip': 0.2,
     }
     env = InvertedPendulumEnv(max_reset_pos=0.01, n_iterations=1, reward_type=0)
+    env.set_dt(0.05)
     model = PPO(env)
-    model.learn(10240000)
+    # model.actor.load_state_dict(torch.load('models/ppo_actor_cartpole_hold3.pth'))
+    # model.critic.load_state_dict(torch.load('models/ppo_critic_cartpole_hold3.pth'))
+    model.learn(2560000)
 
 main()
