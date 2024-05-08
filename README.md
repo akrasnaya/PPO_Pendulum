@@ -150,7 +150,7 @@ if np.cos(pole_angle) > 0:
 следующим образом (по сути была использована одна из предложенных гипотез):
 ```python
     if np.cos(pole_angle) > 0:
-        action = np.abs(np.cos(pole_angle)) * action_hold + (1 - np.abs(np.cos(pole_angle))) * action_swing_up
+        action = np.cos(pole_angle) * action_hold + (1 - np.cos(pole_angle)) * action_swing_up
     else:
         action = action_swing_up
 ```
