@@ -16,12 +16,12 @@ torch.manual_seed(SEED)
 random.seed(SEED)
 
 class PPO:
-    def __init__(self, env):
+    def __init__(self, env, **hyperparameters):
         # Extract environment information
         self.env = env
         self.obs_dim = env.observation_space.shape[0]
         self.act_dim = env.action_space.shape[0]
-        self._init_hyperparameters()
+        self._init_hyperparameters(hyperparameters)
 
         # Initialize actor and critic networks
         self.actor = Actor(self.obs_dim, self.act_dim)
@@ -34,7 +34,7 @@ class PPO:
         self.cov_var = torch.full(size=(self.act_dim,), fill_value=0.5)
         self.cov_mat = torch.diag(self.cov_var)
 
-    def _init_hyperparameters(self):
+    def _init_hyperparameters(self, hyperparameters):
         self.timesteps_per_batch = 1024
         self.max_timesteps_per_episode = 400
         self.gamma = 0.99
@@ -44,6 +44,9 @@ class PPO:
         self.ent_coef = 1.37976e-07
         self.grad_norm = 0.5
         self.gae_lam = 0.9 # GAE Lambda
+
+        for param, val in hyperparameters.items():
+            exec('self.' + param + ' = ' + str(val))
 
     def evaluate(self, batch_obs, batch_acts):
         """
@@ -158,6 +161,9 @@ class PPO:
             batch_vals.append(ep_vals)
             batch_dones.append(ep_dones)
 
+        print(len(batch_rews), len(batch_rews[0]))
+
+
 
         # Convert to np.array
         batch_obs = np.array(batch_obs)
@@ -258,13 +264,13 @@ class PPO:
 
             # Saving actor network
             torch.save(self.actor.state_dict(),
-                        f'models/ppo_actor_cartpole_hold10.pth')
-            mlflow.log_artifact(f'models/ppo_actor_cartpole_hold10.pth',
+                        f'models/ppo_actor_cartpole_hold11.pth')
+            mlflow.log_artifact(f'models/ppo_actor_cartpole_hold11.pth',
                                 'models')
 
             # Saving critic network
             torch.save(self.critic.state_dict(),
-                        f'models/ppo_critic_cartpole_hold10.pth')
-            mlflow.log_artifact(f'models/ppo_critic_cartpole_hold10.pth',
+                        f'models/ppo_critic_cartpole_hold11.pth')
+            mlflow.log_artifact(f'models/ppo_critic_cartpole_hold11.pth',
                                     'models')
 
