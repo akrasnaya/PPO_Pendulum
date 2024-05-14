@@ -1,13 +1,13 @@
-from stable_baselines3 import PPO, A2C, DQN
-from stable_baselines3.common.env_util import make_vec_env
 import time
 import mujoco
 import mujoco.viewer
 import numpy as np
 import gymnasium as gym
 
+SEED = 14
+np.random.seed(SEED)
 
-class InvertedPendulumEnv(gym.Env):
+class ExtendedPendulumEnv(gym.Env):
     xml_env = """
     <mujoco model="inverted pendulum">
             <visual>
@@ -47,33 +47,22 @@ class InvertedPendulumEnv(gym.Env):
     </mujoco>
     """
 
-    def __init__(
-        self,  max_reset_pos, n_iterations, reward_type
-    ):
+    def __init__(self):
+        # Initial positions
         self.init_qpos = np.zeros(2)
         self.init_qvel = np.zeros(2)
-        self.model = mujoco.MjModel.from_xml_string(InvertedPendulumEnv.xml_env)
+
+
+        # Model data
+        self.model = mujoco.MjModel.from_xml_string(self.xml_env)
         self.data = mujoco.MjData(self.model)
         self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
 
         self.action_space = gym.spaces.Box(-3.0, 3.0, (1,), np.float32)
-        # The observation will be the coordinate of the agent
-        # this can be described both by Discrete and Box space
+
         self.observation_space = gym.spaces.Box(
             low=-np.inf, high=np.inf, shape=(4,), dtype=np.float32
         )
-        #self.num_envs = 1
-
-        # data below is used for the extending boundaries experiment
-        self.max_reset_pos = max_reset_pos
-        self.n_iterations = n_iterations
-        self.bound_angle = 0.01
-        self.bound_pos = 0.01
-        self.counter = 0
-        self.pos_step = np.round(max_reset_pos / n_iterations, 6)
-
-        #reward flag for configuring exps
-        self.reward_type = reward_type
 
         # termination borders
         self.x_limit = 1.5
@@ -151,3 +140,64 @@ class InvertedPendulumEnv(gym.Env):
 
     def close(self):
         pass
+
+
+class ExtendedObsEnv(gym.ObservationWrapper):
+    def __init__(self, env, ball_generation):
+        gym.ObservationWrapper.__init__(self, env)
+        self.observation_space = gym.spaces.Box(
+            low=-np.inf, high=np.inf, shape=(5,), dtype=np.float32
+        )
+        self.last_update = 0
+        self.ball_update_time = ball_generation
+
+    def observation(self, obs, ball_pos):
+        obs = np.zeros(5)
+        obs[:4] = np.concatenate([self.data.qpos, self.data.qvel]).ravel()
+        obs[4] = ball_pos
+        return obs
+
+    def reset(self, seed=None, options=None):
+        obs = self.reset_model()
+        return obs, {}
+
+    def reset_model(self):
+        self.data.qpos = self.init_qpos
+        self.data.qvel = self.init_qvel
+        self.data.qpos[1] = 3.14  # Set the pole to be facing down
+        return self.observation(self.obs(), 0)
+
+    def step(self, a):
+        self.data.ctrl = a
+        mujoco.mj_step(self.model, self.data)
+        self.viewer.sync()
+        done = False
+
+        target_pos = [0, 0, 0.6]
+        if self.env.current_time - self.last_update > self.ball_update_time:
+            target_pos = [np.random.rand() - 0.5, 0, 0.6]
+            self.env.draw_ball(target_pos, radius=0.05)
+            self.last_update = self.env.current_time
+
+        ob = self.observation(self.obs(), target_pos[0])
+
+        two_pi = 2 * np.pi
+        reward_theta = (np.e ** (np.cos(ob[1]) + 1.0) - 1.0)
+        reward_x = np.cos((ob[0] / 5) * (np.pi / 2.0)) + 3 * np.cos(ob[4] - ob[0])
+        reward_theta_dot = (np.cos(ob[1]) * (np.e ** (np.cos(ob[3]) + 1.0) - 1.0) / two_pi) + 1.0
+        reward_x_dot = ((np.cos(ob[1]) * (np.e ** (np.cos(ob[2]) + 1.0) - 1) / two_pi) + 1.0)
+        reward = (reward_theta + reward_x + reward_theta_dot + reward_x_dot) / 4.0
+
+        if np.cos(ob[1]) > 0:
+            ball_pos = np.array([target_pos[0], target_pos[2]])
+            pend_pos = np.array([0.6 * np.cos(ob[1]), 0.6 * np.cos(ob[1])])
+            dist = np.linalg.norm(ball_pos - pend_pos)
+            assert dist != 0
+            reward = np.cos(ob[1]) * 5 - np.abs(np.sin(ob[1])) * 3 + (np.abs(ob[0]) < 0.1) * 2 + (1 / dist)
+            if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
+                reward = 6 * np.cos(ob[1]) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
+
+        terminated = bool((not np.isfinite(ob).all()))
+
+        return ob, reward, terminated, done, {}
+

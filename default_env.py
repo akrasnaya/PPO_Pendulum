@@ -51,6 +51,7 @@ class InvertedPendulumEnv:
     ):
         self.init_qpos = np.zeros(2)
         self.init_qvel = np.zeros(2)
+        self.init_ball = [0, 0, 0.6]
         self.model = mujoco.MjModel.from_xml_string(InvertedPendulumEnv.xml_env)
         self.data = mujoco.MjData(self.model)
         self.viewer = mujoco.viewer.launch_passive(self.model, self.data)

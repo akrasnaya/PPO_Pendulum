@@ -23,7 +23,7 @@ ob, dict = env.reset()
 
 target_pos = [0, 0, 0.6]
 while env.current_time < 5000:
-    if env.current_time - last_update > 10:
+    if env.current_time - last_update > 30:
         target_pos = [np.random.rand() - 0.5, 0, 0.6]
         env.draw_ball(target_pos, radius=0.05)
         last_update = env.current_time

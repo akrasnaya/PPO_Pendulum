@@ -44,6 +44,7 @@ class PPO:
         self.ent_coef = 1.37976e-07
         self.grad_norm = 0.5
         self.gae_lam = 0.9 # GAE Lambda
+        self.num_minibatches = 6
 
         for param, val in hyperparameters.items():
             exec('self.' + param + ' = ' + str(val))
@@ -126,6 +127,7 @@ class PPO:
 
 
         t = 0                   # Number of timesteps run so far in this batch
+        last_update = 0
 
         while t < self.timesteps_per_batch:
             ep_rews = []        # Episode rewards
@@ -193,7 +195,7 @@ class PPO:
         mlflow.set_tracking_uri("http://127.0.0.1:5000")
         experiment_name = f"ppo cartpole hold"
         now = datetime.now()
-        run_name = "UPSWING_" + now.strftime("%m/%d/%Y, %H:%M:%S")
+        run_name = "BALL_UPSWING_" + now.strftime("%m/%d/%Y, %H:%M:%S")
         mlflow.set_experiment(experiment_name)
 
         with mlflow.start_run(run_name=run_name):
@@ -218,6 +220,7 @@ class PPO:
                 A_k = (A_k - A_k.mean()) / (A_k.std() + 1e-10)
 
                 t_so_far += np.sum(batch_lens)
+
 
                 for epoch in range(self.n_updates_per_iteration):
                     # Learning rate annealing
@@ -264,13 +267,13 @@ class PPO:
 
             # Saving actor network
             torch.save(self.actor.state_dict(),
-                        f'models/ppo_actor_cartpole_hold11.pth')
-            mlflow.log_artifact(f'models/ppo_actor_cartpole_hold11.pth',
+                        f'models/ppo_actor_cartpole_hold13.pth')
+            mlflow.log_artifact(f'models/ppo_actor_cartpole_hold13.pth',
                                 'models')
 
             # Saving critic network
             torch.save(self.critic.state_dict(),
-                        f'models/ppo_critic_cartpole_hold11.pth')
-            mlflow.log_artifact(f'models/ppo_critic_cartpole_hold11.pth',
+                        f'models/ppo_critic_cartpole_hold13.pth')
+            mlflow.log_artifact(f'models/ppo_critic_cartpole_hold13.pth',
                                     'models')
 
