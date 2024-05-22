@@ -1,7 +1,5 @@
-from my_env import InvertedPendulumEnv
 from extended_env import ExtendedPendulumEnv, ExtendedObsEnv
 from ppo import PPO
-from argparse import ArgumentParser
 
 
 
@@ -20,11 +18,10 @@ def main():
         'num_minibatches': 1
     }
 
-    #env = InvertedPendulumEnv(max_reset_pos=0.01, n_iterations=1, reward_type=0)
     env = ExtendedPendulumEnv()
-    env.set_dt(0.05)
-    env = ExtendedObsEnv(env, ball_generation=15)
+    env.set_dt(0.02)
+    env = ExtendedObsEnv(env, ball_generation=hyperparameters['timesteps_per_batch'])
     model = PPO(env, **hyperparameters)
-    model.learn(total_timesteps=5120000)
+    model.learn(total_timesteps=10240000)
 
 main()

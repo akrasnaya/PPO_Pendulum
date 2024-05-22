@@ -267,13 +267,13 @@ class PPO:
 
             # Saving actor network
             torch.save(self.actor.state_dict(),
-                        f'models/ppo_actor_cartpole_hold13.pth')
-            mlflow.log_artifact(f'models/ppo_actor_cartpole_hold13.pth',
+                        f'models/ppo_actor_cartpole_hold20.pth')
+            mlflow.log_artifact(f'models/ppo_actor_cartpole_hold20.pth',
                                 'models')
 
             # Saving critic network
             torch.save(self.critic.state_dict(),
-                        f'models/ppo_critic_cartpole_hold13.pth')
-            mlflow.log_artifact(f'models/ppo_critic_cartpole_hold13.pth',
+                        f'models/ppo_critic_cartpole_hold20.pth')
+            mlflow.log_artifact(f'models/ppo_critic_cartpole_hold20.pth',
                                     'models')
 
