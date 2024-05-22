@@ -93,13 +93,6 @@ class ExtendedPendulumEnv(gym.Env):
             if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
                 reward = 6 * np.cos(ob[1]) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
 
-        # if np.abs(ob[1]) < self.theta_limit:
-        #     done = True
-        #     reward += 20
-        # else:
-        #     reward = np.abs(np.sin(ob[1])) + np.sqrt(np.abs(ob[2])) + np.sqrt(np.abs(ob[3])) - 2 * np.abs(ob[0])
-
-
         terminated = bool((not np.isfinite(ob).all()))
 
         return ob, reward, terminated, done, {}
@@ -116,7 +109,7 @@ class ExtendedPendulumEnv(gym.Env):
 
         self.data.qpos = self.init_qpos
         self.data.qvel = self.init_qvel
-        self.data.qpos[1] = 3.14  # Set the pole to be facing down
+        #self.data.qpos[1] = 3.14  # Set the pole to be facing down
         return self.obs()
 
     def set_dt(self, new_dt):
@@ -164,7 +157,7 @@ class ExtendedObsEnv(gym.ObservationWrapper):
     def reset_model(self):
         self.data.qpos = self.init_qpos
         self.data.qvel = self.init_qvel
-        self.data.qpos[1] = 3.14  # Set the pole to be facing down
+        #self.data.qpos[1] = 3.14  # Set the pole to be facing down
         return self.observation(self.obs(), 0)
 
     def step(self, a):
@@ -183,19 +176,19 @@ class ExtendedObsEnv(gym.ObservationWrapper):
 
         two_pi = 2 * np.pi
         reward_theta = (np.e ** (np.cos(ob[1]) + 1.0) - 1.0)
-        reward_x = np.cos((ob[0] / 5) * (np.pi / 2.0)) + 3 * np.cos(ob[4] - ob[0])
+        reward_x = np.cos((ob[0] / 5) * (np.pi / 2.0)) + 3 * np.cos(ob[4] - ob[0]) - 2 * np.abs(target_pos[0] - ob[0])
         reward_theta_dot = (np.cos(ob[1]) * (np.e ** (np.cos(ob[3]) + 1.0) - 1.0) / two_pi) + 1.0
         reward_x_dot = ((np.cos(ob[1]) * (np.e ** (np.cos(ob[2]) + 1.0) - 1) / two_pi) + 1.0)
         reward = (reward_theta + reward_x + reward_theta_dot + reward_x_dot) / 4.0
 
         if np.cos(ob[1]) > 0:
             ball_pos = np.array([target_pos[0], target_pos[2]])
-            pend_pos = np.array([0.6 * np.cos(ob[1]), 0.6 * np.cos(ob[1])])
+            pend_pos = np.array([0.6 * np.cos(ob[1]), 0.6 * np.sin(ob[1])])
             dist = np.linalg.norm(ball_pos - pend_pos)
             assert dist != 0
-            reward = np.cos(ob[1]) * 5 - np.abs(np.sin(ob[1])) * 3 + (np.abs(ob[0]) < 0.1) * 2 + (1 / dist)
+            reward = np.cos(ob[1]) * 5 - np.abs(np.sin(ob[1])) * 3 + (np.abs(target_pos[0] - ob[0]) < 0.1) * 2 + min(10, 1 / dist)
             if np.abs(ob[1]) < np.pi / 8 and np.abs(ob[3]) < 0.5:
-                reward = 6 * np.cos(ob[1]) - 3 * np.abs(ob[0]) + (np.abs(ob[0]) < 0.05) * 2
+                reward = 6 * np.cos(ob[1]) + (np.abs(target_pos[0] - ob[0]) < 0.05) * 3 + min(20, 1 / dist)
 
         terminated = bool((not np.isfinite(ob).all()))
 
