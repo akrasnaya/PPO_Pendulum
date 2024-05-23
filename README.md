@@ -4,8 +4,6 @@
 
 ![Симуляция политики на тесте](gifs/final_gif.gif)
 
-Для воспроизведения симуляции итоговой политики на тесте:
-> `(venv) python3 test.py`
 
 ### С помощью алгоритма Proximal Policy Optimization обучить политику, решающую две подзадачи
 
@@ -44,17 +42,23 @@ pip install -r requirements.txt
 ```
 Контент файлов (ветка main)
 ```bash
-- main.py # main-loop запуска обучения моделей
 - test.py # inference на данном окружении
-- my_env.py # данное окружение, расширенное базовыми атрибутами и функцией наград
-- ppo.py # самостоятельная имплементация PPO с добавлением mlflow
-- networks.py # сетки Actor и Critic для PPO
-- default_env.py # данное окружение
+- envs
+  - default_env # данное исходное окружение
+  - my_env.py # данное окружение, расширенное базовыми атрибутами и функцией наград
+  - extended_env.py # окружение с расширенным вектором наблюдений
+- ppo
+  - baseline_ppo.py # PPO policy stable-baseline, расширенная добавлением трекинга mlflow
+  - my_ppo.py # самостоятельно написанная версия
+  - networks.py # сетки Actor and Critic для my_ppo
 - snapshots 
   - ppo_actor_cartpole_hold.pth
   - ppo_critic_cartpole_hold.pth
   - ppo_actor_cartpole_upswing.pth
   - ppo_criric_cartpole_upswing.pth
+  - ppo_actor_cartpole_extended.pth
+  - ppo_criric_cartpole_extended.pth
+  - bound_expand_model.zip
 ```
 
 **1. Решение на основе PPO из stable_baselines**
@@ -62,6 +66,10 @@ pip install -r requirements.txt
 Подробнее: ветка `from_baseline`
 
 ![Baselines policy](gifs/test.gif)
+
+```bash
+(venv) python3 test.py baseline
+```
 
 Плюсы:
 - Хорошее, стабильное поведение на тесте
@@ -76,6 +84,10 @@ pip install -r requirements.txt
 
 ![Self-implemented policy](gifs/final_gif.gif)
 
+```bash
+(venv) python3 test.py basic
+```
+
 Плюсы:
 - Решает задачу upswing
 - Самодельный))))
@@ -89,6 +101,10 @@ pip install -r requirements.txt
 Подробнее: ветка `extended_obs`
 
 ![Расширенные наблюдения](gifs/hold_updated.gif)
+
+```bash
+(venv) python3 test.py extended_obs
+```
 
 Плюсы:
 - end-to-end политика, решающая все подзадачи
