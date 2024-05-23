@@ -1,4 +1,4 @@
-from networks import Actor, Critic
+from ppo import networks
 
 import torch
 from torch import nn
@@ -24,8 +24,8 @@ class PPO:
         self._init_hyperparameters(hyperparameters)
 
         # Initialize actor and critic networks
-        self.actor = Actor(self.obs_dim, self.act_dim)
-        self.critic = Critic(self.obs_dim, 1)
+        self.actor = networks.Actor(self.obs_dim, self.act_dim)
+        self.critic = networks.Critic(self.obs_dim, 1)
 
         self.actor_optimizer = Adam(self.actor.parameters(), lr=self.lr)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=self.lr)
@@ -198,7 +198,7 @@ class PPO:
 
         with mlflow.start_run(run_name=run_name):
             for py_file in Path(__file__).parent.glob("*.py"):
-                mlflow.log_artifact(str(py_file), f"code")
+                mlflow.log_artifact(str(py_file), f"../code")
 
             t_so_far = 0    # Timesteps simulated so far
             while t_so_far < total_timesteps:
@@ -264,13 +264,13 @@ class PPO:
 
             # Saving actor network
             torch.save(self.actor.state_dict(),
-                        f'models/ppo_actor_cartpole_hold11.pth')
-            mlflow.log_artifact(f'models/ppo_actor_cartpole_hold11.pth',
+                       f'../models/ppo_actor_cartpole_hold11.pth')
+            mlflow.log_artifact(f'../models/ppo_actor_cartpole_hold11.pth',
                                 'models')
 
             # Saving critic network
             torch.save(self.critic.state_dict(),
-                        f'models/ppo_critic_cartpole_hold11.pth')
-            mlflow.log_artifact(f'models/ppo_critic_cartpole_hold11.pth',
+                       f'../models/ppo_critic_cartpole_hold11.pth')
+            mlflow.log_artifact(f'../models/ppo_critic_cartpole_hold11.pth',
                                     'models')
 
