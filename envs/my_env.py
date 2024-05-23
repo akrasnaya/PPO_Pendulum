@@ -56,7 +56,7 @@ class InvertedPendulumEnv(gym.Env):
         self.data = mujoco.MjData(self.model)
         self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
 
-        self.action_space = gym.spaces.Box(-3.0, 3.0, (1,), np.float32)
+        self.action_space = gym.spaces.Box(-20.0, 20.0, (1,), np.float32)
         # The observation will be the coordinate of the agent
         # this can be described both by Discrete and Box space
         self.observation_space = gym.spaces.Box(
@@ -134,7 +134,7 @@ class InvertedPendulumEnv(gym.Env):
 
         self.data.qpos = self.init_qpos
         self.data.qvel = self.init_qvel
-        self.data.qpos[1] = 3.14  # Set the pole to be facing down
+        #self.data.qpos[1] = 3.14  # Set the pole to be facing down
         return self.obs()
 
     def set_dt(self, new_dt):
